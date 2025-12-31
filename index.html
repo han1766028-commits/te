@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>沖縄旅行家計簿</title>
+    
+    <!-- PWA / Mobile Web App Settings -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#8dd6a7">
+    
+    <!-- App Icon (SVG Data URI - Green background with Hibiscus) -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2225%22 fill=%22%238dd6a7%22/><text x=%2250%22 y=%2265%22 font-size=%2260%22 text-anchor=%22middle%22>🌺</text></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%220%22 fill=%22%238dd6a7%22/><text x=%2250%22 y=%2265%22 font-size=%2260%22 text-anchor=%22middle%22>🌺</text></svg>">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Vue.js 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    
+    <!-- Google Fonts (Zen Maru Gothic for rounded Japanese feel) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Varela+Round&family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'nook-cream': '#fdfbf7',
+                        'nook-green': '#8dd6a7',
+                        'nook-dark-green': '#5d9c72',
+                        'nook-brown': '#7c6a5a',
+                        'nook-text': '#594a42',
+                        'nook-card': '#fffbf0',
+                        'nook-accent': '#f4d284',
+                    },
+                    fontFamily: {
+                        'sans': ['"Zen Maru Gothic"', '"Varela Round"', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'soft': '0 4px 12px rgba(124, 106, 90, 0.1)',
+                        'floating': '0 8px 24px rgba(124, 106, 90, 0.15)',
+                        'inset-soft': 'inset 0 2px 4px rgba(0,0,0,0.05)'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #f6f2e6;
+            background-image: radial-gradient(#e0dcd0 1px, transparent 1px);
+            background-size: 20px 20px;
+            color: #594a42;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        /* Custom Scrollbar hide */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* Checkbox Animation */
+        .check-anim:checked + div {
+            /* 移除這裡原本寫死的背景色，改用 Tailwind 類別控制 */
+        }
+        .check-anim:checked + div i {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        /* 3D Button Effect */
+        .btn-push {
+            transition: all 0.1s;
+            border-bottom: 4px solid rgba(0,0,0,0.1);
+        }
+        .btn-push:active {
+            transform: translateY(2px);
+            border-bottom: 2px solid rgba(0,0,0,0.1);
+        }
+
+        /* Fix for iPhone notch in standalone mode */
+        @media (display-mode: standalone) {
+            body { padding-top: env(safe-area-inset-top); }
+        }
+    </style>
+</head>
+<body class="font-sans antialiased h-screen overflow-hidden flex flex-col overflow-x-hidden">
+
+    <div id="app" class="h-full w-full flex flex-col max-w-md mx-auto bg-nook-cream shadow-2xl relative overflow-hidden sm:rounded-[40px] sm:my-4 sm:h-[calc(100vh-2rem)] sm:border-4 sm:border-white">
+        
+        <!-- Header -->
+        <header class="bg-nook-green pt-8 pb-4 px-4 rounded-b-[30px] shadow-soft z-20 flex-shrink-0 relative overflow-hidden transition-all duration-300">
+            <div class="absolute -right-6 -top-6 text-white opacity-20 text-8xl transform rotate-12 pointer-events-none">🌺</div>
+            <div class="absolute -left-4 top-4 text-white opacity-10 text-5xl transform -rotate-12 pointer-events-none">🍃</div>
+            
+            <div class="relative z-10 flex justify-between items-center">
+                <div>
+                    <h1 class="text-xl font-bold text-white tracking-widest drop-shadow-sm flex items-center gap-2">
+                        <span>沖縄旅行家計簿</span>
+                        <span class="text-lg">🌺</span>
+                    </h1>
+                    <p class="text-white/90 text-xs mt-0.5 font-medium">Okinawa Trip Note</p>
+                </div>
+                <div class="bg-white/20 backdrop-blur-sm p-1.5 rounded-xl">
+                    <div class="text-[10px] text-white font-bold text-center mb-0">匯率</div>
+                    <input type="number" v-model.number="exchangeRate" class="w-14 bg-transparent text-white font-bold text-center outline-none border-b border-white/50 focus:border-white text-sm" step="0.001">
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 overflow-y-auto no-scrollbar p-4 pb-28 relative z-10 w-full">
+            
+            <!-- Tab 1: 記帳 (Accounting) -->
+            <div v-if="currentTab === 'accounting'" class="space-y-6">
+                
+                <!-- Input Card -->
+                <div class="bg-white rounded-[30px] p-5 shadow-soft border-2 border-nook-card">
+                    <div class="flex flex-col gap-4">
+                        <!-- Amount Input -->
+                        <div class="relative">
+                            <label class="text-xs font-bold text-nook-green ml-2 mb-1 block">金額 (JPY)</label>
+                            <div class="flex items-center bg-gray-50 rounded-2xl px-4 py-3 border-2 border-transparent focus-within:border-nook-green transition-colors">
+                                <span class="text-gray-400 font-bold mr-2">¥</span>
+                                <input type="number" v-model="newExpense.amount" placeholder="0" class="bg-transparent w-full outline-none text-2xl font-bold text-nook-text placeholder-gray-200">
+                            </div>
+                            <div class="absolute right-4 top-[38px] text-nook-brown text-sm font-bold bg-nook-accent/20 px-2 py-1 rounded-lg pointer-events-none">
+                                ≈ NT$ {{ convertedAmount }}
+                            </div>
+                        </div>
+
+                        <!-- Item Name -->
+                        <div>
+                            <input type="text" v-model="newExpense.description" placeholder="輸入項目名稱..." class="w-full bg-gray-50 rounded-2xl px-4 py-3 outline-none text-nook-text font-medium border-2 border-transparent focus:border-nook-green transition-colors">
+                        </div>
+
+                        <!-- Options Row -->
+                        <div class="flex flex-wrap gap-2 py-1">
+                            <button v-for="cat in categories" :key="cat.id" 
+                                @click="newExpense.category = cat.id"
+                                :class="newExpense.category === cat.id ? 'bg-nook-green text-white shadow-md transform scale-105' : 'bg-gray-100 text-gray-400'"
+                                class="px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all duration-200 flex items-center gap-1">
+                                <i :class="cat.icon"></i> {{ cat.name }}
+                            </button>
+                        </div>
+
+                        <!-- Payer Selection -->
+                        <div class="flex justify-between items-center bg-gray-50 p-2 rounded-2xl">
+                            <span class="text-xs font-bold text-gray-400 ml-2">付款人：</span>
+                            <div class="flex gap-2">
+                                <button v-for="p in payers" :key="p" 
+                                    @click="newExpense.payer = p"
+                                    :class="newExpense.payer === p ? 'bg-nook-brown text-white shadow-md' : 'bg-transparent text-gray-400'"
+                                    class="px-4 py-1.5 rounded-xl text-sm font-bold transition-all duration-200">
+                                    {{ p }}
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Add Button -->
+                        <button @click="addExpense" class="btn-push w-full bg-nook-accent text-nook-brown py-3 rounded-2xl font-bold text-lg shadow-md flex justify-center items-center gap-2 hover:brightness-105">
+                            <i class="fa-solid fa-plus-circle"></i> 記一筆
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Expense List -->
+                <div class="space-y-3">
+                    <div class="flex justify-between items-end px-2">
+                        <h2 class="text-xl font-bold text-nook-text">支出紀錄</h2>
+                        <div class="text-right">
+                            <div class="text-xs text-gray-400">總支出</div>
+                            <div class="text-lg font-bold text-nook-dark-green">NT$ {{ totalExpenseTWD }}</div>
+                        </div>
+                    </div>
+
+                    <div v-if="expenses.length === 0" class="text-center py-10 opacity-50">
+                        <i class="fa-solid fa-note-sticky text-4xl mb-2 text-nook-green"></i>
+                        <p>還沒有記帳喔！</p>
+                    </div>
+
+                    <div v-for="(item, index) in expenses" :key="item.id" class="bg-white rounded-2xl p-4 shadow-sm flex justify-between items-center border-b-4 border-gray-50">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 rounded-2xl bg-nook-green/10 flex items-center justify-center text-nook-green text-xl">
+                                <i :class="getCategoryIcon(item.category)"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-nook-text">{{ item.description }}</h3>
+                                <div class="flex items-center gap-2 text-xs text-gray-400 mt-1">
+                                    <span class="bg-gray-100 px-2 py-0.5 rounded-md">{{ item.payer }}</span>
+                                    <span>{{ formatDate(item.date) }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-bold text-nook-text">¥{{ item.amount }}</div>
+                            <div class="text-xs text-gray-400">≈ NT${{ Math.round(item.amount * exchangeRate) }}</div>
+                            <button @click="deleteExpense(index)" class="text-red-300 hover:text-red-500 text-xs mt-1 px-2 py-1 transition-colors">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 2: 行李清單 (Packing) -->
+            <div v-if="currentTab === 'packing'" class="space-y-4">
+                <!-- Role Selector -->
+                <div class="bg-white p-2 rounded-[25px] shadow-sm flex justify-between">
+                    <button v-for="role in packingRoles" :key="role.key"
+                        @click="currentPackingRole = role.key"
+                        :class="currentPackingRole === role.key ? role.activeClass : 'text-gray-400 hover:bg-gray-50'"
+                        class="flex-1 py-3 rounded-[20px] font-bold text-sm transition-all duration-200">
+                        {{ role.label }}
+                    </button>
+                </div>
+
+                <!-- Input -->
+                <div class="flex gap-2 w-full">
+                    <input type="text" v-model="newPackingItem" 
+                        @keyup.enter="addPackingItem"
+                        :placeholder="`新增 ${getRoleLabel(currentPackingRole)} 的物品...`" 
+                        class="flex-1 min-w-0 bg-white rounded-2xl px-4 py-3 shadow-sm outline-none border-2 border-transparent transition-colors text-nook-text"
+                        :class="currentRoleTheme.focusBorder">
+                    <button @click="addPackingItem" 
+                        class="flex-none text-white w-12 rounded-2xl shadow-sm btn-push transition-colors flex items-center justify-center"
+                        :class="currentRoleTheme.btnClass">
+                        <i class="fa-solid fa-plus"></i>
+                    </button>
+                </div>
+
+                <!-- List -->
+                <div class="bg-white rounded-[30px] p-5 shadow-soft min-h-[300px]">
+                    <h3 class="font-bold mb-4 flex items-center gap-2 transition-colors" :class="currentRoleTheme.textClass">
+                        <i class="fa-solid fa-suitcase"></i> 清單列表
+                    </h3>
+                    
+                    <div v-if="packingLists[currentPackingRole].length === 0" class="text-center py-8 opacity-40">
+                        <p>行李空空的？加點東西吧！</p>
+                    </div>
+
+                    <ul class="space-y-3">
+                        <li v-for="(item, index) in packingLists[currentPackingRole]" :key="index" class="group flex items-center gap-3">
+                            <label class="relative flex items-center cursor-pointer">
+                                <input type="checkbox" v-model="item.checked" class="peer sr-only check-anim">
+                                <div class="w-6 h-6 border-2 border-gray-200 rounded-lg transition-all flex items-center justify-center"
+                                     :class="currentRoleTheme.checkboxClass">
+                                    <i class="fa-solid fa-check text-white text-xs opacity-0 transform scale-50 transition-all"></i>
+                                </div>
+                            </label>
+                            <span :class="{'line-through text-gray-300': item.checked, 'text-nook-text': !item.checked}" class="flex-1 font-medium text-lg transition-colors">
+                                {{ item.text }}
+                            </span>
+                            <button @click="deletePackingItem(index)" class="text-gray-300 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Tab 3: 購物清單 (Shopping) -->
+            <div v-if="currentTab === 'shopping'" class="space-y-5">
+                
+                <!-- Input Area (Reorganized for better flow) -->
+                <div class="bg-nook-card border-2 border-dashed border-nook-green/30 rounded-[30px] p-4 flex flex-col gap-3">
+                    
+                    <!-- 1. Name -->
+                    <input type="text" v-model="newShopItem.text" placeholder="想買什麼？(例如: 吹風機)" class="bg-transparent text-lg font-bold text-nook-text placeholder-gray-300 outline-none w-full border-b border-nook-green/20 pb-2 focus:border-nook-green transition-colors">
+                    
+                    <!-- 2. Note -->
+                    <textarea v-model="newShopItem.note" placeholder="備註 (例如: 要粉紅色的、型號X123)" class="bg-white/60 rounded-xl px-4 py-2 text-sm text-nook-text outline-none w-full resize-none border-2 border-transparent focus:border-nook-green transition-colors" rows="2"></textarea>
+
+                    <!-- 3. Photo Upload -->
+                    <label class="cursor-pointer bg-white py-2.5 rounded-xl flex items-center justify-center gap-2 text-nook-green font-bold shadow-sm hover:bg-gray-50 transition-colors border-2 border-transparent hover:border-nook-green/30">
+                        <i class="fa-regular fa-image"></i> 上傳照片
+                        <input type="file" accept="image/*" @change="handleImageUpload" class="hidden">
+                    </label>
+
+                    <!-- Image Preview (Shows linked content before adding) -->
+                    <div v-if="newShopItem.image" class="relative rounded-xl overflow-hidden h-40 w-full border-4 border-white shadow-sm mt-1">
+                        <img :src="newShopItem.image" class="w-full h-full object-cover">
+                        <button @click="newShopItem.image = null" class="absolute top-2 right-2 bg-black/50 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm shadow-md backdrop-blur-sm">✕</button>
+                    </div>
+
+                    <!-- 4. Add Button (Bottom, distinct) -->
+                    <button @click="addShopItem" class="mt-2 bg-nook-accent text-nook-brown py-3 rounded-2xl font-bold shadow-md btn-push w-full text-lg flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-plus"></i> 加入清單
+                    </button>
+                </div>
+
+                <!-- Grid List -->
+                <div class="grid grid-cols-1 gap-4">
+                    <div v-for="(item, index) in shoppingList" :key="item.id" 
+                        class="bg-white rounded-[24px] p-3 shadow-soft flex gap-3 transition-all duration-300 items-start"
+                        :class="{'opacity-60 grayscale': item.done}">
+                        
+                        <!-- Image Area -->
+                        <div class="w-24 h-24 rounded-xl bg-gray-100 flex-shrink-0 overflow-hidden relative shadow-inner border border-gray-100">
+                            <img v-if="item.image" :src="item.image" class="w-full h-full object-cover">
+                            <div v-else class="w-full h-full flex items-center justify-center text-gray-300 text-2xl">
+                                <i class="fa-solid fa-bag-shopping"></i>
+                            </div>
+                        </div>
+
+                        <!-- Content -->
+                        <div class="flex-1 flex flex-col justify-between min-w-0 h-full">
+                            <div class="flex flex-col gap-1">
+                                <h4 class="font-bold text-lg text-nook-text leading-tight" :class="{'line-through': item.done}">{{ item.text || '未命名商品' }}</h4>
+                                
+                                <!-- Note Display -->
+                                <div v-if="item.note" class="flex items-start gap-1.5 bg-nook-card px-2 py-1.5 rounded-lg border border-nook-green/10">
+                                    <i class="fa-solid fa-pen-fancy text-[10px] text-nook-green mt-1"></i>
+                                    <p class="text-xs text-nook-text break-words leading-relaxed">{{ item.note }}</p>
+                                </div>
+                                
+                                <div class="mt-1">
+                                     <span v-if="item.done" class="text-[10px] text-nook-green font-bold bg-nook-green/10 px-2 py-0.5 rounded-full">已購買</span>
+                                     <span v-else class="text-[10px] text-red-400 font-bold bg-red-50 px-2 py-0.5 rounded-full">未購買</span>
+                                </div>
+                            </div>
+
+                            <div class="flex justify-end gap-2 mt-3">
+                                <button @click="toggleShopDone(index)" 
+                                    class="w-9 h-9 rounded-full flex items-center justify-center transition-colors shadow-sm"
+                                    :class="item.done ? 'bg-gray-200 text-gray-500' : 'bg-nook-green text-white btn-push'">
+                                    <i class="fa-solid" :class="item.done ? 'fa-rotate-left' : 'fa-check'"></i>
+                                </button>
+                                <button @click="deleteShopItem(index)" class="w-9 h-9 rounded-full bg-white text-gray-300 border-2 border-gray-100 flex items-center justify-center hover:text-red-400 transition-colors">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                 <div v-if="shoppingList.length === 0" class="text-center py-10 opacity-50">
+                    <p>購物清單是空的，省錢囉？</p>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- Custom Confirmation Modal -->
+        <div v-if="showConfirmModal" class="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 transition-all duration-300">
+            <div class="bg-white rounded-[30px] p-6 w-full max-w-[280px] shadow-floating transform scale-100 transition-all text-center animate-[bounce_0.3s_ease-out]">
+                <div class="w-14 h-14 bg-red-100 text-red-400 rounded-full flex items-center justify-center mx-auto mb-3 text-xl">
+                    <i class="fa-solid fa-trash"></i>
+                </div>
+                <h3 class="font-bold text-nook-text text-lg mb-2">確認刪除</h3>
+                <p class="text-gray-400 text-sm mb-6">{{ confirmMessage }}</p>
+                <div class="flex gap-3">
+                    <button @click="closeConfirmModal" class="flex-1 py-3 rounded-2xl font-bold text-gray-500 bg-gray-100 hover:bg-gray-200 transition-colors">
+                        取消
+                    </button>
+                    <button @click="confirmAction" class="flex-1 py-3 rounded-2xl font-bold text-white bg-red-400 hover:bg-red-500 shadow-md btn-push transition-colors">
+                        刪除
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Navigation -->
+        <nav class="bg-white/95 backdrop-blur-md absolute bottom-0 w-full pb-8 pt-3 px-6 rounded-t-[35px] shadow-[0_-5px_25px_rgba(0,0,0,0.08)] z-30 flex justify-between items-end border-t border-white/60">
+            <button @click="currentTab = 'accounting'" :class="currentTab === 'accounting' ? 'text-nook-dark-green -translate-y-2' : 'text-gray-300'" class="flex-1 flex flex-col items-center justify-end transition-all duration-300 h-14 group">
+                <div :class="currentTab === 'accounting' ? 'bg-nook-accent shadow-lg scale-110' : 'bg-transparent group-active:scale-95'" class="w-11 h-11 rounded-full flex items-center justify-center transition-all duration-300 mb-1">
+                    <i class="fa-solid fa-yen-sign text-lg" :class="currentTab === 'accounting' ? 'text-nook-text' : ''"></i>
+                </div>
+                <span class="text-[11px] font-bold tracking-wide">記帳</span>
+            </button>
+
+            <button @click="currentTab = 'packing'" :class="currentTab === 'packing' ? 'text-nook-dark-green -translate-y-2' : 'text-gray-300'" class="flex-1 flex flex-col items-center justify-end transition-all duration-300 h-14 group">
+                 <div :class="currentTab === 'packing' ? 'bg-nook-accent shadow-lg scale-110' : 'bg-transparent group-active:scale-95'" class="w-11 h-11 rounded-full flex items-center justify-center transition-all duration-300 mb-1">
+                    <i class="fa-solid fa-suitcase text-lg" :class="currentTab === 'packing' ? 'text-nook-text' : ''"></i>
+                </div>
+                <span class="text-[11px] font-bold tracking-wide">行李</span>
+            </button>
+
+            <button @click="currentTab = 'shopping'" :class="currentTab === 'shopping' ? 'text-nook-dark-green -translate-y-2' : 'text-gray-300'" class="flex-1 flex flex-col items-center justify-end transition-all duration-300 h-14 group">
+                 <div :class="currentTab === 'shopping' ? 'bg-nook-accent shadow-lg scale-110' : 'bg-transparent group-active:scale-95'" class="w-11 h-11 rounded-full flex items-center justify-center transition-all duration-300 mb-1">
+                    <i class="fa-solid fa-cart-shopping text-lg" :class="currentTab === 'shopping' ? 'text-nook-text' : ''"></i>
+                </div>
+                <span class="text-[11px] font-bold tracking-wide">購物</span>
+            </button>
+        </nav>
+
+    </div>
+
+    <script>
+        const { createApp, ref, computed, watch, onMounted } = Vue;
+
+        createApp({
+            setup() {
+                // State
+                const currentTab = ref('accounting');
+                const exchangeRate = ref(0.21); // Default JPY to TWD
+                
+                // Modal State
+                const showConfirmModal = ref(false);
+                const confirmMessage = ref('');
+                let pendingConfirmAction = null;
+
+                const openConfirmModal = (message, action) => {
+                    confirmMessage.value = message;
+                    pendingConfirmAction = action;
+                    showConfirmModal.value = true;
+                };
+
+                const confirmAction = () => {
+                    if (pendingConfirmAction) pendingConfirmAction();
+                    closeConfirmModal();
+                };
+
+                const closeConfirmModal = () => {
+                    showConfirmModal.value = false;
+                    pendingConfirmAction = null;
+                };
+
+                // Accounting Data
+                const expenses = ref([]);
+                const newExpense = ref({
+                    amount: '',
+                    description: '',
+                    category: 'food',
+                    payer: '我',
+                    date: ''
+                });
+
+                const categories = [
+                    { id: 'food', name: '美食', icon: 'fa-solid fa-utensils' },
+                    { id: 'transport', name: '交通', icon: 'fa-solid fa-train-subway' },
+                    { id: 'shopping', name: '購物', icon: 'fa-solid fa-bag-shopping' },
+                    { id: 'play', name: '玩樂', icon: 'fa-solid fa-ticket' },
+                    { id: 'other', name: '其他', icon: 'fa-solid fa-star' }
+                ];
+                const payers = ['我', '爸爸'];
+
+                // Packing Data
+                const currentPackingRole = ref('mom');
+                
+                // 定義角色的顏色主題
+                const packingRoles = [
+                    { 
+                        key: 'mom', 
+                        label: '媽媽', 
+                        activeClass: 'bg-pink-400 text-white shadow-md',
+                        btnClass: 'bg-pink-400',
+                        textClass: 'text-pink-400',
+                        focusBorder: 'focus:border-pink-400',
+                        checkboxClass: 'peer-checked:bg-pink-400 peer-checked:border-pink-400'
+                    },
+                    { 
+                        key: 'dad', 
+                        label: '爸爸', 
+                        activeClass: 'bg-blue-400 text-white shadow-md',
+                        btnClass: 'bg-blue-400',
+                        textClass: 'text-blue-400',
+                        focusBorder: 'focus:border-blue-400',
+                        checkboxClass: 'peer-checked:bg-blue-400 peer-checked:border-blue-400'
+                    },
+                    { 
+                        key: 'child', 
+                        label: '小孩', 
+                        activeClass: 'bg-yellow-400 text-white shadow-md',
+                        btnClass: 'bg-yellow-400',
+                        textClass: 'text-yellow-500', // 文字用深一點的黃色比較清楚
+                        focusBorder: 'focus:border-yellow-400',
+                        checkboxClass: 'peer-checked:bg-yellow-400 peer-checked:border-yellow-400'
+                    }
+                ];
+
+                const packingLists = ref({
+                    mom: [{text: '護照', checked: false}, {text: '化妝包', checked: false}],
+                    dad: [{text: '護照', checked: false}, {text: '駕照', checked: false}],
+                    child: [{text: '玩具', checked: false}, {text: '小被被', checked: false}]
+                });
+                const newPackingItem = ref('');
+
+                // Shopping Data
+                const shoppingList = ref([]);
+                const newShopItem = ref({ text: '', note: '', image: null });
+
+                // --- Methods ---
+
+                // Accounting Logic
+                const convertedAmount = computed(() => {
+                    if (!newExpense.value.amount) return 0;
+                    return Math.round(newExpense.value.amount * exchangeRate.value);
+                });
+
+                const totalExpenseTWD = computed(() => {
+                    return expenses.value.reduce((total, item) => {
+                        return total + Math.round(item.amount * exchangeRate.value);
+                    }, 0).toLocaleString();
+                });
+
+                const addExpense = () => {
+                    if (!newExpense.value.amount || !newExpense.value.description) return;
+                    
+                    expenses.value.unshift({
+                        id: Date.now(),
+                        ...newExpense.value,
+                        date: new Date().toISOString()
+                    });
+
+                    // Reset
+                    newExpense.value.amount = '';
+                    newExpense.value.description = '';
+                };
+
+                const deleteExpense = (index) => {
+                    openConfirmModal('確定要刪除這筆紀錄嗎？', () => {
+                        expenses.value.splice(index, 1);
+                    });
+                };
+
+                const getCategoryIcon = (id) => {
+                    return categories.find(c => c.id === id)?.icon || 'fa-star';
+                };
+
+                const formatDate = (isoString) => {
+                    const d = new Date(isoString);
+                    return `${d.getMonth()+1}/${d.getDate()}`;
+                };
+
+                // Packing Logic
+                const getRoleLabel = (key) => packingRoles.find(r => r.key === key)?.label;
+
+                // 計算當前角色的主題顏色物件
+                const currentRoleTheme = computed(() => {
+                    return packingRoles.find(r => r.key === currentPackingRole.value) || packingRoles[0];
+                });
+
+                const addPackingItem = () => {
+                    if (!newPackingItem.value.trim()) return;
+                    packingLists.value[currentPackingRole.value].push({
+                        text: newPackingItem.value,
+                        checked: false
+                    });
+                    newPackingItem.value = '';
+                };
+
+                const deletePackingItem = (index) => {
+                    packingLists.value[currentPackingRole.value].splice(index, 1);
+                };
+
+                // Shopping Logic
+                const handleImageUpload = (event) => {
+                    const file = event.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            newShopItem.value.image = e.target.result;
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                };
+
+                const addShopItem = () => {
+                    // 只要有 文字 或 圖片 或 備註 其中一項，就允許新增
+                    if (!newShopItem.value.text.trim() && !newShopItem.value.image && !newShopItem.value.note.trim()) return;
+                    
+                    shoppingList.value.unshift({
+                        id: Date.now(),
+                        text: newShopItem.value.text,
+                        note: newShopItem.value.note,
+                        image: newShopItem.value.image,
+                        done: false
+                    });
+                    
+                    newShopItem.value = { text: '', note: '', image: null };
+                };
+
+                const toggleShopDone = (index) => {
+                    shoppingList.value[index].done = !shoppingList.value[index].done;
+                };
+
+                const deleteShopItem = (index) => {
+                    openConfirmModal('確定要刪除這個購物項目嗎？', () => {
+                        shoppingList.value.splice(index, 1);
+                    });
+                };
+
+                // Persistence (LocalStorage)
+                onMounted(() => {
+                    const savedExpenses = localStorage.getItem('okinawa_expenses');
+                    if (savedExpenses) expenses.value = JSON.parse(savedExpenses);
+
+                    const savedPacking = localStorage.getItem('okinawa_packing');
+                    if (savedPacking) packingLists.value = JSON.parse(savedPacking);
+
+                    const savedShopping = localStorage.getItem('okinawa_shopping');
+                    if (savedShopping) shoppingList.value = JSON.parse(savedShopping);
+
+                    const savedRate = localStorage.getItem('okinawa_rate');
+                    if (savedRate) exchangeRate.value = parseFloat(savedRate);
+                });
+
+                watch(expenses, (newVal) => localStorage.setItem('okinawa_expenses', JSON.stringify(newVal)), { deep: true });
+                watch(packingLists, (newVal) => localStorage.setItem('okinawa_packing', JSON.stringify(newVal)), { deep: true });
+                watch(shoppingList, (newVal) => localStorage.setItem('okinawa_shopping', JSON.stringify(newVal)), { deep: true });
+                watch(exchangeRate, (newVal) => localStorage.setItem('okinawa_rate', newVal));
+
+                return {
+                    currentTab,
+                    exchangeRate,
+                    // Modal
+                    showConfirmModal,
+                    confirmMessage,
+                    confirmAction,
+                    closeConfirmModal,
+                    // Accounting
+                    expenses,
+                    newExpense,
+                    categories,
+                    payers,
+                    addExpense,
+                    deleteExpense,
+                    convertedAmount,
+                    totalExpenseTWD,
+                    getCategoryIcon,
+                    formatDate,
+                    // Packing
+                    currentPackingRole,
+                    packingRoles,
+                    packingLists,
+                    newPackingItem,
+                    getRoleLabel,
+                    addPackingItem,
+                    deletePackingItem,
+                    currentRoleTheme, // 記得匯出這個 computed 屬性
+                    // Shopping
+                    shoppingList,
+                    newShopItem,
+                    handleImageUpload,
+                    addShopItem,
+                    toggleShopDone,
+                    deleteShopItem
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
